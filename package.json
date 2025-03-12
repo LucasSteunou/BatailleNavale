@@ -1,0 +1,13 @@
+{
+  "name": "bataille-navale",
+  "version": "1.0.0",
+  "description": "Jeu de bataille navale en JS",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}
