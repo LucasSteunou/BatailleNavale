@@ -3,26 +3,51 @@ const http = require("http");
 const socketIo = require("socket.io");
 const path = require("path");
 
-
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Servir les fichiers statiques du dossier frontend
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-// Gérer les connexions des joueurs
-io.on("connection", (socket) => {
-    console.log(`Un joueur connecté : ${socket.id}`);
+let players = {}; // Stocke les deux joueurs
 
+io.on("connection", (socket) => {
+    console.log(`🔵 Joueur connecté : ${socket.id}`);
+
+    // Vérifier si la partie est pleine
+    if (Object.keys(players).length >= 2) {
+        socket.emit("room_full");
+        console.log(`❌ Salle pleine, joueur refusé : ${socket.id}`);
+        socket.disconnect();
+        return;
+    }
+
+    // Ajouter le joueur
+    const playerNumber = Object.keys(players).length === 0 ? "player1" : "player2";
+    players[socket.id] = playerNumber;
+    console.log(`🟢 ${playerNumber} rejoint la partie`);
+
+    // Informer le joueur de son rôle
+    socket.emit("player_assigned", playerNumber);
+
+    // Si deux joueurs sont connectés, démarrer la partie
+    if (Object.keys(players).length === 2) {
+        io.emit("game_start");
+        console.log("🚀 La partie commence !");
+    }
+
+    // Déconnexion d'un joueur
     socket.on("disconnect", () => {
-        console.log(`Joueur déconnecté : ${socket.id}`);
+        console.log(`🔴 Joueur déconnecté : ${socket.id}`);
+        delete players[socket.id];
+
+        // Informer l'autre joueur qu'il est seul
+        io.emit("waiting_for_player");
     });
 });
 
-// Démarrer le serveur sur le port 3000
+// Lancer le serveur
 const PORT = 3000;
 server.listen(PORT, () => {
-    console.log(`Serveur démarré sur http://localhost:${PORT}`);
+    console.log(`✅ Serveur en ligne sur http://localhost:${PORT}`);
 });
-
