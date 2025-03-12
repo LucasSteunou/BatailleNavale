@@ -21,3 +21,8 @@ socket.on("waiting_for_player", () => {
     alert("Un joueur a quitté. En attente d'un adversaire...");
     window.location.reload();
 });
+
+socket.on("both_ships_placed", () => {
+    alert("Tous les bateaux sont placés ! La bataille commence !");
+});
+
