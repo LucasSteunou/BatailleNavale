@@ -5,6 +5,7 @@ const playerCanvas = document.getElementById('playerGrid');
 const enemyCanvas = document.getElementById('enemyGrid');
 const playerCtx = playerCanvas.getContext('2d');
 const enemyCtx = enemyCanvas.getContext('2d');
+const infoBox = document.getElementById('info-box');
 
 let playerBoard = Array.from({ length: 10 }, () => Array(10).fill(0));
 let enemyBoard = Array.from({ length: 10 }, () => Array(10).fill(0));
@@ -85,6 +86,10 @@ function initGame(playerNum) {
     drawGrid(enemyCtx, enemyBoard, true); // Masquer les bateaux sur la grille adverse
 }
 
+function updateInfoBox(message) {
+    infoBox.innerText = message;
+}
+
 enemyCanvas.addEventListener("click", (event) => {
     if (!isMyTurn) {
         alert("Ce n'est pas votre tour !");
@@ -105,6 +110,7 @@ enemyCanvas.addEventListener("click", (event) => {
 
     drawGrid(enemyCtx, enemyBoard, true);
     isMyTurn = false; // Passer le tour après une attaque
+    updateInfoBox(`C'est au tour de l'adversaire.`);
 });
 
 socket.on("attack", (data) => {
@@ -116,6 +122,7 @@ socket.on("attack", (data) => {
     }
     drawGrid(playerCtx, playerBoard);
     isMyTurn = true; // C'est votre tour après l'attaque de l'adversaire
+    updateInfoBox(`C'est votre tour !`);
 });
 
 socket.on("room_full", () => {
@@ -127,5 +134,8 @@ socket.on("game_start", (playerNum) => {
     initGame(playerNum);
     if (playerNum === 1) {
         isMyTurn = true; // Le joueur 1 commence
+        updateInfoBox(`C'est votre tour !`);
+    } else {
+        updateInfoBox(`C'est au tour de l'adversaire.`);
     }
 });

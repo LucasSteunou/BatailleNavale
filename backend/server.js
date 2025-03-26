@@ -9,7 +9,6 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 app.use(express.static('frontend')); // Assurez-vous que le chemin vers votre dossier frontend est correct
-
 // server.js
 
 const players = {};

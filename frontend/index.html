@@ -1,3 +1,5 @@
+<!-- index.html -->
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -7,24 +9,19 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h1>Bataille Navale</h1>
-
-<div class="game-container">
-    <!-- Grille du joueur -->
-    <div class="grid-container">
-        <h2>Votre grille</h2>
-        <canvas id="playerGrid"></canvas>
+    <div class="game-container">
+        <div class="grid-container">
+            <h2>Votre grille</h2>
+            <canvas id="playerGrid"></canvas>
+        </div>
+        <div class="grid-container">
+            <h2>Grille adverse</h2>
+            <canvas id="enemyGrid"></canvas>
+        </div>
     </div>
-
-    <!-- Grille de l'adversaire -->
-    <div class="grid-container">
-        <h2>Grille adverse</h2>
-        <canvas id="enemyGrid"></canvas>
-    </div>
-</div>
-<script src="/socket.io/socket.io.js"></script>
-<script src="socket.js"></script>
-<script src="game.js"></script>
-
+    <div id="info-box">C'est au tour du joueur 1.</div> <!-- Espace pour les messages d'information -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="socket.js"></script>
+    <script src="game.js"></script>
 </body>
-
+</html>
