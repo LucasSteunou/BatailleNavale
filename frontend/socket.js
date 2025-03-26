@@ -4,11 +4,15 @@ const socket = io();
 
 socket.on("game_start", (playerNum) => {
     console.log("🚀 La partie commence ! Vous êtes le joueur " + playerNum);
-    initGame(playerNum); // Initialise le jeu avec le numéro du joueur
+    initGame(playerNum);
 });
 
 socket.on("attack", (data) => {
     handleAttack(data);
+});
+
+socket.on("room_full", () => {
+    alert("La salle est pleine ! Impossible de rejoindre la partie.");
 });
 
 function handleAttack(data) {
@@ -19,4 +23,5 @@ function handleAttack(data) {
         playerBoard[y][x] = 'miss';
     }
     drawGrid(playerCtx, playerBoard);
+    isMyTurn = true; // C'est votre tour après l'attaque de l'adversaire
 }

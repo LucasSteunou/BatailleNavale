@@ -9,6 +9,7 @@ const enemyCtx = enemyCanvas.getContext('2d');
 let playerBoard = Array.from({ length: 10 }, () => Array(10).fill(0));
 let enemyBoard = Array.from({ length: 10 }, () => Array(10).fill(0));
 let playerNumber;
+let isMyTurn = true;
 
 function drawGrid(ctx, board, hideShips = false) {
     ctx.clearRect(0, 0, 300, 300);
@@ -85,6 +86,11 @@ function initGame(playerNum) {
 }
 
 enemyCanvas.addEventListener("click", (event) => {
+    if (!isMyTurn) {
+        alert("Ce n'est pas votre tour !");
+        return;
+    }
+
     const rect = enemyCanvas.getBoundingClientRect();
     const x = Math.floor((event.clientX - rect.left) / cellSize);
     const y = Math.floor((event.clientY - rect.top) / cellSize);
@@ -98,6 +104,7 @@ enemyCanvas.addEventListener("click", (event) => {
     }
 
     drawGrid(enemyCtx, enemyBoard, true);
+    isMyTurn = false; // Passer le tour après une attaque
 });
 
 socket.on("attack", (data) => {
@@ -108,4 +115,17 @@ socket.on("attack", (data) => {
         playerBoard[y][x] = 'miss';
     }
     drawGrid(playerCtx, playerBoard);
+    isMyTurn = true; // C'est votre tour après l'attaque de l'adversaire
+});
+
+socket.on("room_full", () => {
+    alert("La salle est pleine ! Impossible de rejoindre la partie.");
+});
+
+socket.on("game_start", (playerNum) => {
+    console.log("🚀 La partie commence ! Vous êtes le joueur " + playerNum);
+    initGame(playerNum);
+    if (playerNum === 1) {
+        isMyTurn = true; // Le joueur 1 commence
+    }
 });

@@ -14,6 +14,7 @@ app.use(express.static('frontend')); // Assurez-vous que le chemin vers votre do
 
 const players = {};
 let playerCount = 0;
+let currentTurn = 1;
 
 io.on("connection", (socket) => {
     console.log(`🔵 Joueur connecté : ${socket.id}`);
@@ -34,6 +35,7 @@ io.on("connection", (socket) => {
 
     socket.on("attack", (data) => {
         socket.broadcast.emit("attack", data);
+        currentTurn = currentTurn === 1 ? 2 : 1; // Changer de tour
     });
 
     socket.on("disconnect", () => {
@@ -42,6 +44,7 @@ io.on("connection", (socket) => {
         io.emit("player_disconnected", socket.id);
     });
 });
+
 
 
 const PORT = process.env.PORT || 3000;
