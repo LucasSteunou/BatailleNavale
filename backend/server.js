@@ -1,59 +1,50 @@
-const express = require("express");
-const http = require("http");
-const socketIo = require("socket.io");
-const path = require("path");
+// server.js
+
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-app.use(express.static(path.join(__dirname, "../frontend")));
+app.use(express.static('frontend')); // Assurez-vous que le chemin vers votre dossier frontend est correct
 
-let players = {}; // Stocke les deux joueurs
-let playerShips = {}; // Stocke les positions des bateaux pour chaque joueur
+// server.js
+
+const players = {};
+let playerCount = 0;
 
 io.on("connection", (socket) => {
     console.log(`🔵 Joueur connecté : ${socket.id}`);
 
-    if (Object.keys(players).length >= 2) {
+    if (playerCount >= 2) {
         socket.emit("room_full");
         socket.disconnect();
         return;
     }
 
-    const playerNumber = Object.keys(players).length === 0 ? "player1" : "player2";
+    playerCount++;
+    const playerNumber = playerCount;
     players[socket.id] = playerNumber;
-    console.log(`🟢 ${playerNumber} rejoint la partie`);
 
-    socket.emit("player_assigned", playerNumber);
-
-    if (Object.keys(players).length === 2) {
-        io.emit("game_start");
-        console.log("🚀 La partie commence !");
+    if (playerCount === 2) {
+        io.emit("game_start", playerNumber);
     }
 
-    socket.on("ships_placed", (board) => {
-        playerShips[socket.id] = board;
-        console.log(`🚢 ${playerNumber} a placé ses bateaux.`);
-
-        if (Object.keys(playerShips).length === 2) {
-            io.emit("both_ships_placed");
-            console.log("🔥 Tous les bateaux sont placés, la partie peut commencer !");
-        }
+    socket.on("attack", (data) => {
+        socket.broadcast.emit("attack", data);
     });
 
     socket.on("disconnect", () => {
-        console.log(`🔴 Joueur déconnecté : ${socket.id}`);
         delete players[socket.id];
-        delete playerShips[socket.id];
-
-        io.emit("waiting_for_player");
+        playerCount--;
+        io.emit("player_disconnected", socket.id);
     });
 });
 
 
-// Lancer le serveur
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`✅ Serveur en ligne sur http://localhost:${PORT}`);
+    console.log(`Serveur en écoute sur le port ${PORT}`);
 });

@@ -1,64 +1,111 @@
-const playerCanvas = document.getElementById("playerGrid");
-const enemyCanvas = document.getElementById("enemyGrid");
+// game.js
 
-if (!playerCanvas || !enemyCanvas) {
-    console.error("❌ Les éléments <canvas> ne sont pas trouvés !");
-}
+const cellSize = 30;
+const playerCanvas = document.getElementById('playerGrid');
+const enemyCanvas = document.getElementById('enemyGrid');
+const playerCtx = playerCanvas.getContext('2d');
+const enemyCtx = enemyCanvas.getContext('2d');
 
-const playerCtx = playerCanvas.getContext("2d");
-const enemyCtx = enemyCanvas.getContext("2d");
+let playerBoard = Array.from({ length: 10 }, () => Array(10).fill(0));
+let enemyBoard = Array.from({ length: 10 }, () => Array(10).fill(0));
+let playerNumber;
 
-const gridSize = 10;
-const cellSize = 40;
-
-playerCanvas.width = enemyCanvas.width = gridSize * cellSize;
-playerCanvas.height = enemyCanvas.height = gridSize * cellSize;
-
-let playerBoard = Array(gridSize).fill(null).map(() => Array(gridSize).fill(0)); // 0 = vide, 1 = bateau
-let placingShips = true; // Mode de placement des bateaux
-let shipsToPlace = 5; // Nombre de bateaux à placer
-
-function drawGrid(ctx, board) {
-    ctx.clearRect(0, 0, playerCanvas.width, playerCanvas.height);
-    ctx.strokeStyle = "black";
-
-    for (let i = 0; i < gridSize; i++) {
-        for (let j = 0; j < gridSize; j++) {
-            ctx.strokeRect(i * cellSize, j * cellSize, cellSize, cellSize);
-            if (board[j][i] === 1) {  // 🔥 Correction : inversé i et j
-                ctx.fillStyle = "gray";
-                ctx.fillRect(j * cellSize + 2, i * cellSize + 2, cellSize - 4, cellSize - 4);
+function drawGrid(ctx, board, hideShips = false) {
+    ctx.clearRect(0, 0, 300, 300);
+    for (let y = 0; y < 10; y++) {
+        for (let x = 0; x < 10; x++) {
+            ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            if (board[y][x] === 1 && !hideShips) {
+                ctx.fillStyle = 'gray';
+                ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            } else if (board[y][x] === 'hit') {
+                ctx.fillStyle = 'red';
+                ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            } else if (board[y][x] === 'miss') {
+                ctx.fillStyle = 'blue';
+                ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
             }
         }
     }
 }
 
-// 🔥 Correction : Placement des bateaux avec clic
-playerCanvas.addEventListener("click", (event) => {
-    if (!placingShips) return;
+function placeShipsRandomly(board, shipSizes) {
+    for (let size of shipSizes) {
+        let placed = false;
+        while (!placed) {
+            const direction = Math.random() < 0.5 ? 'horizontal' : 'vertical';
+            let x, y;
+            if (direction === 'horizontal') {
+                x = Math.floor(Math.random() * (10 - size));
+                y = Math.floor(Math.random() * 10);
+            } else {
+                x = Math.floor(Math.random() * 10);
+                y = Math.floor(Math.random() * (10 - size));
+            }
 
-    const rect = playerCanvas.getBoundingClientRect();
+            if (canPlaceShip(board, x, y, size, direction)) {
+                placeShip(board, x, y, size, direction);
+                placed = true;
+            }
+        }
+    }
+}
+
+function canPlaceShip(board, x, y, size, direction) {
+    if (direction === 'horizontal') {
+        for (let i = 0; i < size; i++) {
+            if (board[y][x + i] !== 0) return false;
+        }
+    } else {
+        for (let i = 0; i < size; i++) {
+            if (board[y + i][x] !== 0) return false;
+        }
+    }
+    return true;
+}
+
+function placeShip(board, x, y, size, direction) {
+    if (direction === 'horizontal') {
+        for (let i = 0; i < size; i++) {
+            board[y][x + i] = 1;
+        }
+    } else {
+        for (let i = 0; i < size; i++) {
+            board[y + i][x] = 1;
+        }
+    }
+}
+
+function initGame(playerNum) {
+    playerNumber = playerNum;
+    const shipSizes = [5, 4, 3, 3, 2];
+    placeShipsRandomly(playerBoard, shipSizes);
+    drawGrid(playerCtx, playerBoard);
+    drawGrid(enemyCtx, enemyBoard, true); // Masquer les bateaux sur la grille adverse
+}
+
+enemyCanvas.addEventListener("click", (event) => {
+    const rect = enemyCanvas.getBoundingClientRect();
     const x = Math.floor((event.clientX - rect.left) / cellSize);
     const y = Math.floor((event.clientY - rect.top) / cellSize);
 
-    console.log(`Clic détecté en (${x}, ${y})`);
-
-    if (x >= 0 && x < gridSize && y >= 0 && y < gridSize && playerBoard[y][x] === 0) {
-        playerBoard[y][x] = 1;
-        shipsToPlace--;
-        drawGrid(playerCtx, playerBoard);
-        console.log(`🚢 Bateau placé en (${x}, ${y}) - Restants : ${shipsToPlace}`);
-
-        if (shipsToPlace === 0) {
-            placingShips = false;
-            alert("Tous vos bateaux sont placés !");
-            socket.emit("ships_placed", playerBoard);
-        }
-    } else {
-        console.log("❌ Impossible de placer un bateau ici !");
+    if (enemyBoard[y][x] === 0) {
+        enemyBoard[y][x] = 'miss';
+        socket.emit("attack", { x, y, result: 'miss' });
+    } else if (enemyBoard[y][x] === 1) {
+        enemyBoard[y][x] = 'hit';
+        socket.emit("attack", { x, y, result: 'hit' });
     }
+
+    drawGrid(enemyCtx, enemyBoard, true);
 });
 
-// Dessiner les grilles au chargement
-drawGrid(playerCtx, playerBoard);
-drawGrid(enemyCtx, Array(gridSize).fill(null).map(() => Array(gridSize).fill(0)));
+socket.on("attack", (data) => {
+    const { x, y, result } = data;
+    if (result === 'hit') {
+        playerBoard[y][x] = 'hit';
+    } else {
+        playerBoard[y][x] = 'miss';
+    }
+    drawGrid(playerCtx, playerBoard);
+});
