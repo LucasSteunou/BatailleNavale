@@ -1,27 +1,42 @@
 <!-- index.html -->
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bataille Navale</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div class="game-container">
-        <div class="grid-container">
-            <h2>Votre grille</h2>
-            <canvas id="playerGrid"></canvas>
-        </div>
-        <div class="grid-container">
-            <h2>Grille adverse</h2>
-            <canvas id="enemyGrid"></canvas>
+<h1>Jeu de Bataille Navale</h1>
+<div class="game-container">
+    <!-- Grille du joueur -->
+    <div class="grid-container">
+        <h2>Votre grille</h2>
+        <canvas id="playerGrid" width="300" height="300"></canvas>
+        <div class="controls">
+            <button id="random-btn" class="btn">Placement aléatoire</button>
+            <button id="rotate-btn" class="btn">Rotation : Horizontal</button>
+            <button id="ready-btn" class="btn" disabled>Prêt</button>
         </div>
     </div>
-    <div id="info-box">C'est au tour du joueur 1.</div> <!-- Espace pour les messages d'information -->
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="socket.js"></script>
-    <script src="game.js"></script>
+    <!-- Grille de l'adversaire -->
+    <div class="grid-container">
+        <h2>Grille adverse</h2>
+        <canvas id="enemyGrid" width="300" height="300"></canvas>
+    </div>
+</div>
+<!-- Boîte d'information pour afficher les messages (tours, résultats, etc.) -->
+<div id="info-box"></div>
+<!-- Écran de fin de partie -->
+<div id="game-over" class="hidden">
+    <h2 id="game-over-text"></h2>
+    <button id="restart-btn" class="btn">Rejouer</button>
+</div>
+
+<!-- Scripts clients -->
+<script src="/socket.io/socket.io.js"></script>
+<script src="socket.js"></script>
+<script src="game.js"></script>
 </body>
 </html>
