@@ -1,93 +1,89 @@
-🛳️ Bataille Navale – Multijoueur Local (Socket.IO)
-Un jeu web de bataille navale classique, jouable en multijoueur local sur deux navigateurs.
-Développé avec Node.js, Socket.IO, HTML/CSS/JS.
+# Bataille Navale en Ligne
 
-📁 Arborescence du projet
-bash
-Copier
-Modifier
-bataille-navale/
-├── frontend/
-│   ├── index.html              # Interface principale
-│   ├── style.css               # Styles du jeu
-│   ├── game.js                 # Logique du jeu côté client
-│   ├── socket.js               # Gestion des sockets côté client
-│   ├── explosion.png       # Effet visuel lors d’un tir réussi
-│
-├── backend/
-│   └── server.js               # Serveur Node.js + Socket.IO
-│
-├── package.json               # Dépendances (express, socket.io)
-└── README.md                  # Ce fichier
-🚀 Lancement en local
-1. Cloner ou récupérer le projet
-   bash
-   Copier
-   Modifier
-   git clone <url-du-dépôt>
-   cd bataille-navale
-2. Installer les dépendances
-   Depuis la racine (où se trouve package.json), exécute :
+Bienvenue dans le projet de Bataille Navale en ligne ! Ce projet est une implémentation du jeu classique de Bataille Navale, où deux joueurs peuvent s'affronter en temps réel. Le projet utilise Node.js, Express, et Socket.IO pour gérer la communication en temps réel entre les joueurs.
 
-nginx
-Copier
-Modifier
-npm install
-⚠️ Si package.json est dans le dossier backend/, navigue d’abord dedans : cd backend && npm install
+## Table des Matières
 
-3. Lancer le serveur
-   bash
-   Copier
-   Modifier
-   node backend/server.js
-   Par défaut, le serveur écoute sur le port 3000.
+1. [Description](#description)
+2. [Fonctionnalités](#fonctionnalités)
+3. [Installation](#installation)
+4. [Utilisation](#utilisation)
+5. [Contribution](#contribution)
+6. [Licence](#licence)
 
-4. Ouvrir deux navigateurs
-   Accède à l’adresse suivante dans deux fenêtres/onglets séparés :
+## Description
 
-arduino
-Copier
-Modifier
-http://localhost:3000
-👥 Le jeu détecte automatiquement les joueurs 1 et 2 via Socket.IO.
+La Bataille Navale est un jeu de stratégie où chaque joueur place des navires sur une grille et tente de couler les navires de l'adversaire en devinant leurs positions. Ce projet permet de jouer en ligne contre un autre joueur en temps réel.
 
-🎮 Fonctionnalités
-Placement des bateaux :
+## Fonctionnalités
 
-5 bateaux à placer (porte-avion, croiseur, destroyer, sous-marin, torpilleur)
+- **Interface Utilisateur Réactive** : Grilles interactives pour placer les navires et attaquer l'adversaire.
+- **Communication en Temps Réel** : Utilisation de Socket.IO pour des mises à jour instantanées.
+- **Système de Salles** : Gestion de plusieurs parties simultanées.
+- **Chat Intégré** : Permet aux joueurs de communiquer pendant la partie.
+- **Effets Sonores et Visuels** : Améliore l'expérience de jeu avec des sons et des animations.
 
-Positionnement manuel avec rotation (horizontal / vertical)
+## Installation
 
-Placement aléatoire possible
+Pour installer et exécuter ce projet localement, suivez ces étapes :
 
-Visualisation en survol (vert = ok, rouge = invalide)
+1. **Cloner le Dépôt** :
+   ```bash
+   git clone https://gitlab.ec-lyon.fr/aleronde/bataillenavale.git
+   cd bataille-navale-en-ligne
+   ```
 
-Modification d’un bateau tant que "Prêt" n’est pas cliqué
+2. **Installer les Dépendances** :
+   ```bash
+   npm install
+   ```
 
-Déroulement du jeu :
+3. **Démarrer le Serveur** :
+   ```bash
+   npm start
+   ```
 
-Chaque joueur joue à son tour
+4. **Accéder à l'Application** :
+   Ouvrez votre navigateur et allez à `http://localhost:3000` pour jouer au jeu en local.
+   
+   Pour jouer en ligne, vous pourrez à l'occasion (nous ne mettons pas le jeu en ligne à toute heure) ouvrir votre navigateur à l'adresse suivante : https://AdamLucasBatailleNavale.up.railway.app/
 
-Si un tir touche un bateau, le joueur peut rejouer
+## Utilisation
 
-Feedback immédiat : touché, coulé, à l’eau
+1. **Connexion au Jeu** :
+   - Ouvrez deux fenêtres de navigateur ou utilisez deux appareils pour simuler deux joueurs.
+   - Chaque joueur doit accéder à l'URL du serveur pour rejoindre une partie.
 
-Explosion visuelle lors d’un tir réussi
+2. **Placement des Navires** :
+   - Placez vos navires sur la grille en utilisant l'interface de placement.
+   - Vous pouvez utiliser le placement aléatoire ou placer manuellement vos navires.
 
-Fin de partie :
+3. **Début de la Partie** :
+   - Une fois les navires placés, cliquez sur "Prêt" pour indiquer que vous êtes prêt à commencer.
+   - La partie commence lorsque les deux joueurs sont prêts.
 
-Quand tous les bateaux d’un joueur sont coulés
+4. **Jouer au Jeu** :
+   - Cliquez sur les cases de la grille adverse pour attaquer.
+   - Les résultats des attaques (touché, manqué, coulé) sont affichés en temps réel.
 
-Écran de victoire/défaite + bouton rejouer
+5. **Fin de la Partie** :
+   - Le jeu se termine lorsque tous les navires d'un joueur sont coulés.
+   - Vous pouvez redémarrer une nouvelle partie en cliquant sur "Rejouer".
 
-Chat intégré :
+## Contribution
 
-Discussion en temps réel entre les deux joueurs
+Les contributions sont les bienvenues ! Pour contribuer :
 
-Interface :
+1. Forkez le dépôt.
+2. Créez une branche pour votre fonctionnalité (`git checkout -b feature/nouvelle-fonctionnalite`).
+3. Commitez vos modifications (`git commit -m 'Ajout d'une nouvelle fonctionnalité'`).
+4. Poussez vers la branche (`git push origin feature/nouvelle-fonctionnalité`).
+5. Ouvrez une Pull Request.
 
-Ergonomique, responsive, lisible
+## Licence
 
-Coordonnées visibles (A–J et 1–10)
+Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
-Explosion visuelle (image)
+---
+
+N'hésitez pas à personnaliser ce README en fonction des spécificités de votre projet ou des informations supplémentaires que vous souhaitez inclure.
