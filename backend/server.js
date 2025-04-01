@@ -99,6 +99,7 @@ io.on('connection', (socket) => {
         let shipName = '';         // Nom du bateau coulé (pour attaquant)
         let defenderShipName = ''; // Nom du bateau touché (pour défenseur)
         const cellValue = defender.board[y][x];  // Valeur de la case sur le plateau défenseur
+        let sunkCoords = [];
 
         if (cellValue === 0 || cellValue === 'miss' || cellValue === 'hit') {
             // Tir à l'eau
@@ -114,15 +115,34 @@ io.on('connection', (socket) => {
                 // Le navire est coulé
                 result = 'sunk';
                 shipName = defenderShipName;
+                // Trouver toutes les cases de ce navire
+                sunkCoords = [];
+                for (let row = 0; row < 10; row++) {
+                    for (let col = 0; col < 10; col++) {
+                        if (defender.board[row][col] === 'hit') {
+                            // Check si ça correspond à ce navire
+                            const originalValue = defender.originalBoard?.[row]?.[col];
+                            if (originalValue === shipId || cellValue === shipId) {
+                                sunkCoords.push({ x: col, y: row });
+                            }
+                        }
+                    }
+                }
                 console.log(`Le navire ${shipName} du joueur ${defender.number} est coulé.`);
             } else {
                 result = 'hit';
             }
         }
-
-        // Envoyer le résultat du tir aux deux joueurs
-        attacker.socket.emit('attack_result', { x, y, result, shipName });
-        defender.socket.emit('opponent_attack', { x, y, result, shipName: defenderShipName });
+        const payload = { x, y, result, shipName };
+        const opponentPayload = { x, y, result, shipName: defenderShipName };
+        // Si c’est un bateau coulé, ajouter les coordonnées du navire
+        if (result === 'sunk') {
+            payload.sunkCoords = sunkCoords;
+            opponentPayload.sunkCoords = sunkCoords;
+        }
+        // Envoyer aux deux joueurs
+        attacker.socket.emit('attack_result', payload);
+        defender.socket.emit('opponent_attack', opponentPayload);
 
         // Vérifier la fin de partie (tous les bateaux du défenseur coulés)
         if (result === 'sunk') {

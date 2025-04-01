@@ -54,7 +54,7 @@ socket.on('game_start', () => {
 });
 
 // Résultat d'une attaque effectuée par le joueur
-socket.on('attack_result', ({ x, y, result, shipName }) => {
+socket.on('attack_result', ({ x, y, result, shipName, sunkCoords}) => {
     // Mettre à jour la grille adverse selon le résultat
     if (result === 'hit' || result === 'sunk') {
         enemyBoard[y][x] = 'hit';
@@ -77,11 +77,18 @@ socket.on('attack_result', ({ x, y, result, shipName }) => {
         updateInfoBox("Touché ! Vous pouvez jouer à nouveau !");
     } else if (result === 'sunk') {
         updateInfoBox(`Touché coulé ! Vous avez coulé le ${shipName} adverse.`);
+        if (Array.isArray(sunkCoords)) {
+            sunkCoords.forEach(coord => {
+                enemyBoard[coord.y][coord.x] = 'sunk';
+            });
+        }
+        sunkSound.play();
+        drawGrid(enemyCtx, enemyBoard, true);
     }
 });
 
 // Attaque reçue de l'adversaire sur notre grille
-socket.on('opponent_attack', ({ x, y, result, shipName }) => {
+socket.on('opponent_attack', ({ x, y, result, shipName, sunkCoords}) => {
     // Mettre à jour la grille selon le résultat du tir adverse
     if (result === 'miss') {
         playerBoard[y][x] = 'miss';
@@ -107,6 +114,13 @@ socket.on('opponent_attack', ({ x, y, result, shipName }) => {
         isMyTurn = false;
     } else if (result === 'sunk') {
         updateInfoBox(`L'adversaire a coulé votre ${shipName} ! C'est à nouveau à lui de jouer !`);
+        if (Array.isArray(sunkCoords)) {
+            sunkCoords.forEach(coord => {
+                playerBoard[coord.y][coord.x] = 'sunk';
+            });
+        }
+        sunkSound.play();
+        drawGrid(playerCtx, playerBoard, false, true);
         isMyTurn = false;
     }
 });

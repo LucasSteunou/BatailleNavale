@@ -18,7 +18,7 @@ const lobbyMusic = new Audio('audio/lobby.mp3');
 const battleMusic = new Audio('audio/battle.mp3');
 const hitSound = new Audio('audio/hit.mp3');
 const missSound = new Audio('audio/miss.mp3');
-
+const sunkSound = new Audio('audio/sunk.mp3');
 // Boucle les musiques d’ambiance
 lobbyMusic.loop = true;
 battleMusic.loop = true;
@@ -28,6 +28,7 @@ lobbyMusic.volume = 0.4;
 battleMusic.volume = 0.4;
 hitSound.volume = 0.9;
 missSound.volume = 0.7;
+sunkSound.volume = 0.8;
 
 
 // Navires à placer (identifiant, nom, taille)
@@ -70,6 +71,17 @@ function drawGrid(ctx, board, hideShips = false, isPlayer = false) {
             } else if (cell === 'miss') {
                 ctx.fillStyle = 'blue';
                 ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            } else if (cell === 'sunk') {
+                ctx.fillStyle = 'red';
+                ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                const img = new Image();
+                img.src = 'images/explosion.png';
+                img.onload = () => {
+                    ctx.drawImage(img, x * cellSize, y * cellSize, cellSize, cellSize);
+                };
+                if (img.complete) {
+                    ctx.drawImage(img, x * cellSize, y * cellSize, cellSize, cellSize);
+                }
             }
         }
     }
