@@ -1,4 +1,5 @@
-// game.js (logique du jeu côté client)
+// game.js – Logique du jeu côté client
+
 const cellSize = 30;
 const playerCanvas = document.getElementById('playerGrid');
 const enemyCanvas = document.getElementById('enemyGrid');
@@ -12,7 +13,7 @@ const gameOverOverlay = document.getElementById('game-over');
 const gameOverText = document.getElementById('game-over-text');
 const restartBtn = document.getElementById('restart-btn');
 
-// Paramètres des bateaux (tailles) à placer
+// Navires à placer (identifiant, nom, taille)
 const shipsToPlace = [
     { id: 1, name: "Porte-avions", size: 5 },
     { id: 2, name: "Croiseur", size: 4 },
@@ -21,22 +22,19 @@ const shipsToPlace = [
     { id: 5, name: "Torpilleur", size: 2 }
 ];
 let selectedShip = shipsToPlace[0];
-let currentOrientation = 'horizontal'; // orientation actuelle ('horizontal' ou 'vertical')
-let hoverX = -1;
-let hoverY = -1;
-let placedShips = {}; // {shipId: {x, y, orientation}}
+let currentOrientation = 'horizontal';
+let hoverX = -1, hoverY = -1;
 
-
-// Plateau du joueur et de l'adversaire (10x10)
+// Plateaux 10x10 (0 = vide, nombre = id du navire, 'hit' = touché, 'miss' = manqué)
 let playerBoard = Array.from({ length: 10 }, () => Array(10).fill(0));
 let enemyBoard = Array.from({ length: 10 }, () => Array(10).fill(0));
 
 // États du jeu
 let playerNumber = null;
 let isMyTurn = false;
-let gameStarted = false;   // indique si la phase de jeu (tirs) est commencée
+let gameStarted = false;
 
-// Dessiner une grille (ctx: contexte du canvas, board: plateau, hideShips: cacher les bateaux ?)
+// Dessiner une grille de jeu dans un canvas
 function drawGrid(ctx, board, hideShips = false, isPlayer = false) {
     ctx.clearRect(0, 0, 300, 300);
     for (let y = 0; y < 10; y++) {
@@ -45,6 +43,7 @@ function drawGrid(ctx, board, hideShips = false, isPlayer = false) {
             ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
             const cell = board[y][x];
             if (!hideShips && typeof cell === 'number' && cell !== 0) {
+                // Dessiner le navire (cases grises) si non masqué
                 ctx.fillStyle = 'gray';
                 ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
             }
@@ -57,11 +56,10 @@ function drawGrid(ctx, board, hideShips = false, isPlayer = false) {
             }
         }
     }
-
-    // Affichage du bateau en survol
+    // Indiquer le positionnement possible du navire sélectionné sous le curseur
     if (!gameStarted && isPlayer && selectedShip && hoverX >= 0 && hoverY >= 0) {
-        const size = shipSizes[currentShipIndex];
-        const valid = canPlaceShip(playerBoard, hoverX, hoverY, selectedShip.size, currentOrientation);
+        const size = selectedShip.size;
+        const valid = canPlaceShip(playerBoard, hoverX, hoverY, size, currentOrientation);
         ctx.fillStyle = valid ? 'rgba(0,255,0,0.5)' : 'rgba(255,0,0,0.5)';
         for (let i = 0; i < size; i++) {
             const x = hoverX + (currentOrientation === 'horizontal' ? i : 0);
@@ -73,16 +71,15 @@ function drawGrid(ctx, board, hideShips = false, isPlayer = false) {
     }
 }
 
-
-// Vérifier si un bateau de taille donnée peut être placé aux coordonnées (x, y) avec l'orientation donnée
+// Vérifier si un navire peut être placé à une position donnée
 function canPlaceShip(board, startX, startY, size, orientation) {
     if (orientation === 'horizontal') {
-        if (startX + size > 10) return false; // dépasse à droite du plateau
+        if (startX + size > 10) return false;  // Dépasse à droite du plateau
         for (let i = 0; i < size; i++) {
-            if (board[startY][startX + i] !== 0) return false; // case déjà occupée
+            if (board[startY][startX + i] !== 0) return false;  // Espace déjà occupé
         }
-    } else { // vertical
-        if (startY + size > 10) return false; // dépasse en bas du plateau
+    } else {  // vertical
+        if (startY + size > 10) return false;  // Dépasse en bas du plateau
         for (let i = 0; i < size; i++) {
             if (board[startY + i][startX] !== 0) return false;
         }
@@ -90,7 +87,7 @@ function canPlaceShip(board, startX, startY, size, orientation) {
     return true;
 }
 
-// Placer un bateau sur le plateau (en marquant chaque case avec un identifiant de navire)
+// Placer un navire sur le plateau (marquer chaque case avec son identifiant)
 function placeShip(board, startX, startY, size, orientation, shipId) {
     if (orientation === 'horizontal') {
         for (let i = 0; i < size; i++) {
@@ -103,7 +100,9 @@ function placeShip(board, startX, startY, size, orientation, shipId) {
     }
 }
 
+// Retirer un navire du plateau (pour le repositionner)
 function removeShip(shipId) {
+    // Enlever toutes les cases de ce navire du plateau joueur
     for (let y = 0; y < 10; y++) {
         for (let x = 0; x < 10; x++) {
             if (playerBoard[y][x] === shipId) {
@@ -111,66 +110,34 @@ function removeShip(shipId) {
             }
         }
     }
-    delete placedShips[shipId];
-
-    shipsToPlace.unshift({
-        id: shipId,
-        name: getShipName(shipId),
-        size: getShipSize(shipId)
-    });
+    // Remettre le navire retiré dans la liste des navires à placer
+    const shipInfo = shipsToPlace.find(s => s.id === shipId)
+        || { id: shipId, name: getShipName(shipId), size: getShipSize(shipId) };
+    shipsToPlace.unshift(shipInfo);
     selectedShip = shipsToPlace[0];
-
-    updateInfoBox(`Placez votre ${selectedShip.name} (${selectedShip.size} cases).`);
+    updateInfoBox(`Déplacement du ${selectedShip.name} (${selectedShip.size} cases)`);
     drawGrid(playerCtx, playerBoard, false, true);
     readyBtn.disabled = true;
 }
 
-
-
+// Obtenir le nom d'un navire à partir de son identifiant
 function getShipName(id) {
     const names = ["Porte-avions", "Croiseur", "Destroyer", "Sous-marin", "Torpilleur"];
     return names[id - 1];
 }
 
+// Obtenir la taille d'un navire à partir de son identifiant
 function getShipSize(id) {
     return [5, 4, 3, 3, 2][id - 1];
 }
 
-
-// Placement aléatoire de tous les bateaux sur le plateau donné
-function placeShipsRandomly(board, shipSizesArray) {
-    // Vider le plateau
+function placeShipsRandomly(board) {
+    // Vider entièrement le plateau
     for (let y = 0; y < 10; y++) {
         board[y].fill(0);
     }
-    // Placer chaque bateau selon sa taille, avec un identifiant unique
-    for (let i = 0; i < shipSizesArray.length; i++) {
-        const size = shipSizesArray[i];
-        const shipId = i + 1;  // identifiant du navire (1 à 5)
-        let placed = false;
-        while (!placed) {
-            const orientation = Math.random() < 0.5 ? 'horizontal' : 'vertical';
-            const x = Math.floor(Math.random() * 10);
-            const y = Math.floor(Math.random() * 10);
-            if (canPlaceShip(board, x, y, size, orientation)) {
-                placeShip(board, x, y, size, orientation, shipId);
-                placed = true;
-            }
-        }
-    }
-}
 
-// Mettre à jour le message d'information (info-box)
-function updateInfoBox(message) {
-    infoBox.innerText = message;
-}
-
-// Démarrer une nouvelle phase de placement (utilisé au début et lors d'un "Rejouer")
-function startPlacementPhase() {
-    gameStarted = false;
-    isMyTurn = false;
-    currentShipIndex = 0;
-    currentOrientation = 'horizontal';
+    // Réinitialiser la liste des bateaux à placer
     shipsToPlace.length = 0;
     shipsToPlace.push(
         { id: 1, name: "Porte-avions", size: 5 },
@@ -181,11 +148,54 @@ function startPlacementPhase() {
     );
     selectedShip = shipsToPlace[0];
 
-    // Réinitialiser les plateaux
+    // Placer chaque navire aléatoirement
+    for (const ship of [...shipsToPlace]) {
+        const { id, size } = ship;
+        let placed = false;
+        while (!placed) {
+            const orientation = Math.random() < 0.5 ? 'horizontal' : 'vertical';
+            const x = Math.floor(Math.random() * 10);
+            const y = Math.floor(Math.random() * 10);
+            if (canPlaceShip(board, x, y, size, orientation)) {
+                placeShip(board, x, y, size, orientation, id);
+                placed = true;
+            }
+        }
+    }
+
+    // Vider la file d’attente (tous les bateaux ont été placés)
+    shipsToPlace.length = 0;
+    selectedShip = null;
+
+    readyBtn.disabled = false;
+    updateInfoBox("Bateaux placés aléatoirement. Cliquez sur 'Prêt'.");
+}
+
+// Mise à jour du message d'information affiché à l'écran
+function updateInfoBox(message) {
+    infoBox.innerText = message;
+}
+
+// Démarrer une nouvelle phase de placement (au début ou après un "Rejouer")
+function startPlacementPhase() {
+    gameStarted = false;
+    isMyTurn = false;
+    // Réinitialiser la liste des navires à placer
+    shipsToPlace.length = 0;
+    shipsToPlace.push(
+        { id: 1, name: "Porte-avions", size: 5 },
+        { id: 2, name: "Croiseur", size: 4 },
+        { id: 3, name: "Destroyer", size: 3 },
+        { id: 4, name: "Sous-marin", size: 3 },
+        { id: 5, name: "Torpilleur", size: 2 }
+    );
+    selectedShip = shipsToPlace[0];
+    currentOrientation = 'horizontal';
+    // Réinitialiser les plateaux de jeu
     playerBoard = Array.from({ length: 10 }, () => Array(10).fill(0));
     enemyBoard = Array.from({ length: 10 }, () => Array(10).fill(0));
-    // Afficher les grilles vides
-    drawGrid(playerCtx, playerBoard);
+    // Redessiner les grilles vides
+    drawGrid(playerCtx, playerBoard, false, true);
     drawGrid(enemyCtx, enemyBoard, true);
     // Réinitialiser l'interface des boutons
     readyBtn.disabled = true;
@@ -195,33 +205,31 @@ function startPlacementPhase() {
     randomBtn.classList.remove('hidden');
     rotateBtn.classList.remove('hidden');
     gameOverOverlay.classList.add('hidden');
-    // Si le joueur 2 attendait, il reste en attente d'un adversaire
+    // Indiquer au joueur 1 d'attendre un adversaire, ou au joueur 2 de placer ses bateaux
     if (playerNumber === 1) {
         updateInfoBox("En attente d'un adversaire...");
-    } else {
+    } else if (playerNumber === 2) {
         updateInfoBox("Placez vos bateaux.");
     }
 }
 
-// Événement de clic sur la grille du joueur (placement manuel d'un bateau)
+// Clic sur la grille du joueur (placement manuel d'un navire)
 playerCanvas.addEventListener('click', (e) => {
-    if (gameStarted || playerNumber === null || !selectedShip) return;
+    if (gameStarted || playerNumber === null) return;
     const rect = playerCanvas.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) / cellSize);
     const y = Math.floor((e.clientY - rect.top) / cellSize);
-
     const clickedValue = playerBoard[y][x];
     if (typeof clickedValue === 'number' && clickedValue !== 0) {
+        // Un navire se trouve ici : on le retire pour permettre un repositionnement
         removeShip(clickedValue);
-        updateInfoBox(`Déplacement du ${getShipName(clickedValue)} (${getShipSize(clickedValue)} cases)`);
-        drawGrid(playerCtx, playerBoard, false, true);
-        readyBtn.disabled = true;
         return;
     }
-
+    if (!selectedShip) return;  // Tous les navires sont déjà placés
     const size = selectedShip.size;
     if (canPlaceShip(playerBoard, x, y, size, currentOrientation)) {
         placeShip(playerBoard, x, y, size, currentOrientation, selectedShip.id);
+        // Enlever ce navire de la liste des navires restants à placer
         shipsToPlace.shift();
         selectedShip = shipsToPlace[0];
         drawGrid(playerCtx, playerBoard, false, true);
@@ -236,8 +244,7 @@ playerCanvas.addEventListener('click', (e) => {
     }
 });
 
-
-
+// Surligner la position possible du navire en bougeant la souris sur la grille
 playerCanvas.addEventListener('mousemove', (e) => {
     const rect = playerCanvas.getBoundingClientRect();
     hoverX = Math.floor((e.clientX - rect.left) / cellSize);
@@ -250,66 +257,70 @@ playerCanvas.addEventListener('mouseleave', () => {
     drawGrid(playerCtx, playerBoard, false, true);
 });
 
-
-// Bouton "Placement aléatoire" - place tous les bateaux du joueur aléatoirement
+// Bouton "Placement aléatoire"
 randomBtn.addEventListener('click', () => {
-    placeShipsRandomly(playerBoard, shipSizes);
-    drawGrid(playerCtx, playerBoard);
-    currentShipIndex = shipSizes.length; // tous placés
+    placeShipsRandomly(playerBoard);
+    drawGrid(playerCtx, playerBoard, false, true);
     readyBtn.disabled = false;
     updateInfoBox("Bateaux placés aléatoirement. Cliquez sur 'Prêt'.");
 });
 
-// Bouton "Rotation" - changer l'orientation du prochain bateau à placer
+// Bouton "Rotation"
 rotateBtn.addEventListener('click', () => {
     if (currentOrientation === 'horizontal') {
         currentOrientation = 'vertical';
-        rotateBtn.innerText = "Rotation : Vertical";
+        rotateBtn.innerText = "Rotation : Vertical__";
     } else {
         currentOrientation = 'horizontal';
         rotateBtn.innerText = "Rotation : Horizontal";
     }
 });
 
-// Bouton "Prêt" - envoie le plateau du joueur au serveur et attend l'adversaire
+// Bouton "Prêt"
 readyBtn.addEventListener('click', () => {
-    if (currentShipIndex < shipSizes.length) {
-        // Si tous les bateaux ne sont pas placés (sécurité supplémentaire)
+    // Ne rien faire si tous les navires ne sont pas encore placés
+    if (shipsToPlace.length !== 0) {
         return;
     }
-    // Désactiver les actions de placement
+    // Désactiver les actions de placement après validation
     readyBtn.disabled = true;
     randomBtn.disabled = true;
     rotateBtn.disabled = true;
-    // Envoyer l'événement 'ready' au serveur avec le plateau du joueur
+    // Envoyer au serveur que le joueur est prêt (avec son plateau)
     socket.emit('ready', playerBoard);
     updateInfoBox("En attente que l'adversaire soit prêt...");
 });
 
-// Gestion du tir sur la grille adverse
-enemyCanvas.addEventListener('click', (event) => {
-    if (!gameStarted || !isMyTurn) {
-        // Si la partie n'a pas commencé ou que ce n'est pas le tour du joueur
-        return;
-    }
+// Clic sur la grille adverse (tirer un missile)
+enemyCanvas.addEventListener('click', (e) => {
+    if (!gameStarted || !isMyTurn) return;
     const rect = enemyCanvas.getBoundingClientRect();
-    const x = Math.floor((event.clientX - rect.left) / cellSize);
-    const y = Math.floor((event.clientY - rect.top) / cellSize);
-    // Vérifier qu'on n'a pas déjà tiré sur cette case
-    if (enemyBoard[y][x] === 'hit' || enemyBoard[y][x] === 'miss') {
-        return; // tir déjà effectué sur cette coordonnée
-    }
-    // Envoyer l'attaque au serveur
+    const x = Math.floor((e.clientX - rect.left) / cellSize);
+    const y = Math.floor((e.clientY - rect.top) / cellSize);
+    // Ne tirer que si la case n'a pas déjà été visée
+    if (enemyBoard[y][x] === 'hit' || enemyBoard[y][x] === 'miss') return;
     socket.emit('attack', { x, y });
-    // On attend le résultat du serveur avant d'actualiser la grille
-    // (isMyTurn passera à false dès réception du résultat dans socket.js)
+    // Le résultat du tir est géré via socket.io
 });
 
-// Bouton "Rejouer" (écran de fin de partie) - demander au serveur de recommencer une partie
+// Bouton "Rejouer" (nouvelle partie)
 restartBtn.addEventListener('click', () => {
     socket.emit('restart');
 });
 
-// Dessiner les grilles initiales vides au chargement
-drawGrid(playerCtx, playerBoard);
+// Effet visuel d'explosion sur une case touchée
+function triggerExplosion(ctx, x, y) {
+    const explosionImg = new Image();
+    explosionImg.src = 'explosion.png';
+    explosionImg.onload = () => {
+        ctx.drawImage(explosionImg, x * cellSize, y * cellSize, cellSize, cellSize);
+        // Effacer l'explosion après 1 seconde en redessinant la grille concernée
+        setTimeout(() => {
+            drawGrid(ctx, ctx === playerCtx ? playerBoard : enemyBoard, ctx === enemyCtx);
+        }, 1000);
+    };
+}
+
+// Dessiner les grilles vides au chargement initial
+drawGrid(playerCtx, playerBoard, false, true);
 drawGrid(enemyCtx, enemyBoard, true);

@@ -1,8 +1,8 @@
-/* style.css */
+/* Style global */
 body {
     text-align: center;
     font-family: Arial, sans-serif;
-    background-color: #0077b6;  /* Bleu de fond */
+    background-color: #0077b6;
     color: white;
     margin: 0;
     padding: 20px;
@@ -11,21 +11,72 @@ h1 {
     margin: 0;
     font-size: 2em;
 }
+h2 {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+/* Conteneur principal */
 .game-container {
     display: flex;
     justify-content: center;
-    gap: 50px;
+    gap: 30px;
     margin-top: 20px;
+    flex-wrap: wrap;  /* Passe en colonne sur écrans étroits */
 }
+
+/* Conteneur de chaque section de grille */
 .grid-container {
     text-align: center;
+    position: relative;
 }
-canvas {
-    border: 3px solid white;
-    background-color: #caf0f8; /* Bleu clair pour l'océan */
+
+/* Wrapper pour la grille + labels */
+.grid-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+/* Labels des colonnes en haut (A-J) */
+.labels.top-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding-left: 20px;  /* espace pour le coin vide (étiquette de ligne) */
+    box-sizing: border-box;
+}
+.labels.top-labels span {
+    flex: 1;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* Labels des lignes sur le côté (1-10) */
+.row-container {
+    display: flex;
+}
+.labels.side-labels {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 300px;
+    margin-right: 5px;
+}
+.labels.side-labels span {
+    flex: 1;
     display: block;
-    margin: auto;
+    text-align: center;
+    font-weight: bold;
 }
+
+/* Style des canvas */
+canvas {
+    border: 2px solid white;
+    background-color: #caf0f8;
+    display: block;
+}
+
+/* Boutons de contrôle */
 .controls {
     margin-top: 10px;
 }
@@ -37,19 +88,25 @@ canvas {
     font-size: 1em;
     cursor: pointer;
     border-radius: 5px;
-    margin: 0 5px;
+    margin: 5px;
+    min-width: 100px;
 }
 .btn:hover {
     background-color: #0077b6;
     color: white;
 }
+
+/* Boîte d'informations */
 #info-box {
     margin-top: 20px;
-    font-size: 1.2em;
+    font-size: 1.1em;
     min-height: 1.5em;
+    font-weight: bold;
 }
+
+/* Écran de fin de partie (overlay) */
 #game-over {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -66,4 +123,55 @@ canvas {
 }
 #game-over h2 {
     margin-bottom: 20px;
+}
+
+/* Zone de chat */
+.chat-container {
+    width: 250px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+.chat-container h2 {
+    text-align: center;
+}
+.chat-messages {
+    background-color: #ffffff22;
+    flex: 1;
+    padding: 10px;
+    margin-bottom: 10px;
+    height: 200px;
+    overflow-y: auto;
+    border: 1px solid #fff;
+    border-radius: 5px;
+    text-align: left;
+}
+.chat-msg {
+    margin-bottom: 5px;
+}
+.chat-msg.self {
+    text-align: right;
+    color: #90ee90;    /* vert clair pour soi */
+}
+.chat-msg.opponent {
+    text-align: left;
+    color: #ffcccb;    /* rouge clair pour adversaire */
+}
+.chat-input-area {
+    display: flex;
+}
+#chat-input {
+    flex: 1;
+    padding: 5px;
+    font-size: 1em;
+    border: 2px solid #0077b6;
+    border-radius: 5px 0 0 5px;
+}
+#send-btn {
+    border-radius: 0 5px 5px 0;
+}
+
+/* Classe utilitaire pour masquer un élément */
+.hidden {
+    display: none;
 }

@@ -1,36 +1,40 @@
-// socket.js (gestion des événements Socket.IO côté client)
+// socket.js – Gestion des événements Socket.IO côté client
+
 const socket = io();
 
-// Événement : attribution du numéro de joueur (1 ou 2) par le serveur
+// Éléments du chat
+const chatMessages = document.getElementById('chat-messages');
+const chatInput   = document.getElementById('chat-input');
+const sendBtn     = document.getElementById('send-btn');
+
+// Attribution du numéro de joueur par le serveur
 socket.on('player_number', (num) => {
     playerNumber = num;
     if (playerNumber === 1) {
         updateInfoBox("En attente d'un adversaire...");
     } else {
-        updateInfoBox("Placez vos bateaux.");  // Joueur 2 peut directement placer ses bateaux
+        updateInfoBox("Placez vos bateaux.");  // Joueur 2 peut placer directement
     }
 });
 
-// Événement : un deuxième joueur a rejoint la partie (les deux joueurs sont connectés)
+// Un deuxième joueur a rejoint la partie
 socket.on('opponent_connected', () => {
     if (playerNumber === 1) {
         updateInfoBox("Un adversaire a rejoint. Placez vos bateaux.");
     }
-    // Le joueur 2 reçoit aussi cet événement, on peut simplement s'assurer que l'info-box indique de placer les bateaux
     if (playerNumber === 2) {
         updateInfoBox("Placez vos bateaux.");
     }
 });
 
-// Événement : l'adversaire a fini de placer ses bateaux et est prêt
+// L'adversaire est prêt (bateaux placés)
 socket.on('opponent_ready', () => {
-    updateInfoBox("Adversaire prêt. Cliquez sur 'Prêt' lorsque vous êtes prêt.");
+    updateInfoBox("Adversaire prêt. Cliquez sur 'Prêt' lorsque vous l'êtes.");
 });
 
-// Événement : début de la partie (les deux joueurs ont cliqué "Prêt")
+// Début de la partie (les deux joueurs ont cliqué "Prêt")
 socket.on('game_start', () => {
     gameStarted = true;
-    // Déterminer à qui est le tour initial (joueur 1 commence)
     if (playerNumber === 1) {
         isMyTurn = true;
         updateInfoBox("La partie commence ! C'est votre tour.");
@@ -38,62 +42,66 @@ socket.on('game_start', () => {
         isMyTurn = false;
         updateInfoBox("La partie commence ! C'est au tour de l'adversaire.");
     }
+    // Masquer les boutons de placement une fois la partie lancée
+    readyBtn.classList.add('hidden');
+    randomBtn.classList.add('hidden');
+    rotateBtn.classList.add('hidden');
 });
 
-// Événement : résultat d'une attaque que j'ai effectuée (réponse du serveur à mon tir)
-socket.on('attack_result', (data) => {
-    const { x, y, result, shipName } = data;
-    // Mettre à jour la grille adverse en fonction du résultat
+// Résultat d'une attaque effectuée par le joueur
+socket.on('attack_result', ({ x, y, result, shipName }) => {
+    // Mettre à jour la grille adverse selon le résultat
     if (result === 'hit' || result === 'sunk') {
-        enemyBoard[y][x] = 'hit';  // touché (on marque en rouge)
+        enemyBoard[y][x] = 'hit';
     } else if (result === 'miss') {
-        enemyBoard[y][x] = 'miss'; // à l'eau (on marque en bleu)
+        enemyBoard[y][x] = 'miss';
     }
     drawGrid(enemyCtx, enemyBoard, true);
-    // Préparer le message de résultat pour l'attaquant
-    if (result === 'miss') {
-        updateInfoBox("À l'eau ! C'est au tour de l'adversaire.");
-    } else if (result === 'hit') {
-        updateInfoBox("Touché ! C'est au tour de l'adversaire.");
-    } else if (result === 'sunk') {
-        // Un navire ennemi est coulé - shipName contient le nom du navire coulé
-        updateInfoBox(`Touché coulé ! Vous avez coulé le ${shipName} adverse. C'est au tour de l'adversaire.`);
+    // Effet d'explosion côté attaquant si touché
+    if (result === 'hit' || result === 'sunk') {
+        triggerExplosion(enemyCtx, x, y);
     }
-    // Fin de tour pour l'attaquant (on attend l'adversaire)
-    isMyTurn = false;
+    // Message de résultat pour le joueur
+    if (result === 'miss') {
+        updateInfoBox("À l'eau ! Tour de l'adversaire...");
+        isMyTurn = false;
+    } else if (result === 'hit') {
+        updateInfoBox("Touché ! Vous pouvez jouer à nouveau !");
+    } else if (result === 'sunk') {
+        updateInfoBox(`Touché coulé ! Vous avez coulé le ${shipName} adverse.`);
+    }
 });
 
-// Événement : on reçoit une attaque de l'adversaire sur notre grille
-socket.on('opponent_attack', (data) => {
-    const { x, y, result, shipName } = data;
-    // Mettre à jour notre grille (playerBoard) en fonction du résultat du tir de l'adversaire
+// Attaque reçue de l'adversaire sur notre grille
+socket.on('opponent_attack', ({ x, y, result, shipName }) => {
+    // Mettre à jour la grille selon le résultat du tir adverse
     if (result === 'miss') {
-        playerBoard[y][x] = 'miss';  // tir dans l'eau sur notre grille
+        playerBoard[y][x] = 'miss';
     } else {
-        playerBoard[y][x] = 'hit';   // l'adversaire a touché un de nos bateaux
+        playerBoard[y][x] = 'hit';
     }
-    drawGrid(playerCtx, playerBoard);
-    // Préparer le message pour le défenseur (nous)
+    drawGrid(playerCtx, playerBoard, false, true);
+    // Effet d'explosion côté défenseur si touché
+    if (result === 'hit' || result === 'sunk') {
+        triggerExplosion(playerCtx, x, y);
+    }
+    // Message pour le joueur défenseur
     if (result === 'miss') {
-        updateInfoBox("L'adversaire a manqué son tir. C'est votre tour !");
+        updateInfoBox("L'adversaire a manqué. À vous de jouer !");
+        isMyTurn = true;
     } else if (result === 'hit') {
-        // shipName contient le nom de notre bateau touché (facultatif si non fourni, on peut l'utiliser si présent)
-        if (shipName) {
-            updateInfoBox(`L'adversaire a touché votre ${shipName}. C'est à vous de jouer !`);
-        } else {
-            updateInfoBox("L'adversaire a touché l'un de vos bateaux. C'est à vous de jouer !");
-        }
+        updateInfoBox(shipName 
+            ? `L'adversaire a touché votre ${shipName}. C'est à nouveau à lui de jouer !`
+            : "L'adversaire a touché l'un de vos bateaux. C'est à nouveau à lui de jouer !");
+        isMyTurn = false;
     } else if (result === 'sunk') {
-        // Un de nos bateaux a été coulé
-        updateInfoBox(`L'adversaire a coulé votre ${shipName} ! C'est votre tour.`);
+        updateInfoBox(`L'adversaire a coulé votre ${shipName} ! C'est à nouveau à lui de jouer !`);
+        isMyTurn = false;
     }
-    // À nous de jouer au tour suivant
-    isMyTurn = true;
 });
 
-// Événement : la partie est terminée (tous les bateaux d'un joueur coulés)
+// Fin de partie (tous les bateaux d'un joueur coulés)
 socket.on('game_over', ({ winner }) => {
-    // Afficher l'écran de fin avec le nom du gagnant
     let message;
     if (winner === playerNumber) {
         message = "Vous avez gagné !";
@@ -102,25 +110,45 @@ socket.on('game_over', ({ winner }) => {
     }
     gameOverText.innerText = message;
     gameOverOverlay.classList.remove('hidden');
-    // Désactiver toute interaction de tir après la fin
+    // Désactiver les tirs après la fin
     gameStarted = false;
     isMyTurn = false;
 });
 
-// Événement : demande de redémarrage de la partie (les deux joueurs préparent une nouvelle partie)
+// Nouvelle partie (les deux joueurs redémarrent une manche)
 socket.on('restart_game', () => {
-    // Réinitialiser l'interface pour une nouvelle partie
     startPlacementPhase();
 });
 
-// Événement : la salle est pleine (un troisième joueur a tenté de se connecter)
+// Salle pleine (un troisième joueur a tenté de se connecter)
 socket.on('room_full', () => {
     alert("La salle est pleine ! Impossible de rejoindre la partie.");
 });
 
-// Événement : l'adversaire a quitté la partie
+// L'adversaire a quitté la partie
 socket.on('opponent_left', () => {
     alert("Votre adversaire a quitté la partie. En attente d'un nouveau joueur...");
-    // Réinitialisation pour attendre un nouveau joueur
     startPlacementPhase();
+});
+
+// Réception d'un message de chat
+socket.on('chat_message', ({ player, message }) => {
+    const alignment = (player === playerNumber) ? 'self' : 'opponent';
+    const msgElem = document.createElement('div');
+    msgElem.classList.add('chat-msg', alignment);
+    msgElem.textContent = `${alignment === 'self' ? 'Moi' : 'Adversaire'}: ${message}`;
+    chatMessages.appendChild(msgElem);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+});
+
+// Envoi d'un message de chat
+sendBtn.addEventListener('click', () => {
+    if (chatInput.value.trim() === "" || playerNumber === null) return;
+    socket.emit('chat_message', chatInput.value);
+    chatInput.value = "";
+});
+chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        sendBtn.click();
+    }
 });
