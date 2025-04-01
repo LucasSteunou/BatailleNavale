@@ -108,7 +108,7 @@ socket.on('opponent_attack', ({ x, y, result, shipName, sunkCoords}) => {
     }
     // Message pour le joueur défenseur
     if (result === 'miss') {
-        triggerWater(enemyCtx, x, y);
+        triggerWater(playerCtx, x, y);
         missSound.play();
         updateInfoBox("L'adversaire a manqué. À vous de jouer !");
         isMyTurn = true;
