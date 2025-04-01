@@ -175,3 +175,45 @@ canvas {
 .hidden {
     display: none;
 }
+
+#credits {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background-color: rgba(0,0,0,0.6);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    font-family: sans-serif;
+    z-index: 1000;
+}
+
+#credits .credit-name {
+    cursor: pointer;
+    text-decoration: underline;
+    margin: 0 4px;
+}
+
+#credit-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.85);
+    padding: 10px;
+    border-radius: 8px;
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+}
+
+#credit-popup img {
+    max-width: 80vw;
+    max-height: 80vh;
+    border-radius: 8px;
+}
+
+.hidden {
+    display: none;
+}
