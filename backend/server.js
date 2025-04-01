@@ -9,10 +9,9 @@ const path = require('path');
 // Servir les fichiers statiques (HTML, CSS, JS)
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// État du jeu
-let players = [];        // Joueurs connectés (max 2)
-let currentTurn = null;  // Joueur dont c'est le tour (1 ou 2)
-let gameActive = false;  // Partie en cours ou non
+// Système de salles pour gérer plusieurs parties en parallèle
+const rooms = {}; // ex: { room123: { players: [], gameActive: false, currentTurn: null } }
+
 
 // Informations sur les navires (id : nom et taille)
 const shipInfos = {
@@ -24,44 +23,78 @@ const shipInfos = {
 };
 
 io.on('connection', (socket) => {
-    // Refuser les connexions au-delà de 2 joueurs
-    if (players.length >= 2) {
-        socket.emit('room_full');
-        socket.disconnect();
-        return;
+    // 1. Rechercher une room avec < 2 joueurs
+    let assignedRoom = null;
+    for (const [roomId, room] of Object.entries(rooms)) {
+        if (room.players.length < 2) {
+            assignedRoom = roomId;
+            break;
+        }
     }
-    // Assigner un numéro de joueur (1 ou 2)
-    const playerNum = players.length + 1;
-    players.push({
-        socket: socket,
+
+    // 2. Si aucune room dispo, créer une nouvelle
+    if (!assignedRoom) {
+        assignedRoom = `room-${socket.id}`; // room unique liée au socket
+        rooms[assignedRoom] = {
+            players: [],
+            currentTurn: null,
+            gameActive: false
+        };
+    }
+
+    // 3. Joindre la room et initialiser le joueur
+    socket.join(assignedRoom);
+    const playerNum = rooms[assignedRoom].players.length + 1;
+
+    rooms[assignedRoom].players.push({
+        socket,
         number: playerNum,
         ready: false,
-        board: [],   // Plateau 10x10 du joueur
-        ships: {}    // État des navires (cases restantes par navire)
+        board: [],
+        ships: {}
     });
-    socket.emit('player_number', playerNum);
-    console.log(`Joueur ${playerNum} connecté.`);
 
-    // Si deux joueurs connectés, notifier la phase de placement
-    if (players.length === 2) {
-        players.forEach(p => p.socket.emit('opponent_connected'));
-        console.log("Deux joueurs connectés. Phase de placement.");
+    // 4. Informer le client de son numéro et de sa room
+    socket.emit('player_number', playerNum);
+    socket.emit('room_assigned', assignedRoom);
+
+    // 5. S'il y a 2 joueurs, notifier que la partie peut commencer
+    if (rooms[assignedRoom].players.length === 2) {
+        rooms[assignedRoom].players.forEach(p =>
+            p.socket.emit('opponent_connected')
+        );
+        console.log(`Room ${assignedRoom} complète. Phase de placement.`);
+    } else {
+        console.log(`Room ${assignedRoom} créée. En attente d'un second joueur...`);
     }
 
+
     // Message de chat reçu d'un client
-    socket.on('chat_message', (msg) => {
-        const player = players.find(p => p.socket.id === socket.id);
+    socket.on('chat_message', ({message, roomId}) => {
+        const room = rooms[roomId];
+        if (!room) return;
+
+        const player = room.players.find(p => p.socket.id === socket.id);
         if (!player) return;
-        io.emit('chat_message', { player: player.number, message: msg });
+
+        io.to(roomId).emit('chat_message', {
+            player: player.number,
+            message
+        });
     });
 
     // Un joueur a terminé le placement de ses bateaux et est prêt
-    socket.on('ready', (board) => {
-        const player = players.find(p => p.socket.id === socket.id);
+    socket.on('ready', ({board, roomId}) => {
+        const room = rooms[roomId];
+        if (!room) return;
+
+        const player = room.players.find(p => p.socket.id === socket.id);
         if (!player) return;
+
         player.board = board;
         player.ready = true;
-        // Initialiser l'état des navires du joueur
+
+        // Initialiser les bateaux du joueur
         player.ships = {};
         for (let id in shipInfos) {
             player.ships[id] = {
@@ -69,127 +102,151 @@ io.on('connection', (socket) => {
                 cellsLeft: shipInfos[id].size
             };
         }
-        console.log(`Joueur ${player.number} prêt. Bateaux placés.`);
 
-        // Informer l'autre joueur si lui seul est prêt
-        const opponent = players.find(p => p.socket.id !== socket.id);
+        console.log(`🔹 Joueur ${player.number} prêt dans ${roomId}.`);
+
+        // Informer l’adversaire si lui seul n’est pas prêt
+        const opponent = room.players.find(p => p.socket.id !== socket.id);
         if (opponent && !opponent.ready) {
             opponent.socket.emit('opponent_ready');
         }
+
         // Si les deux joueurs sont prêts, lancer la partie
-        if (players.length === 2 && players.every(p => p.ready)) {
-            currentTurn = 1;       // Le joueur 1 commence
-            gameActive = true;
-            io.emit('game_start');
-            console.log("Les deux joueurs sont prêts. La partie commence !");
+        if (room.players.every(p => p.ready)) {
+            room.currentTurn = 1;
+            room.gameActive = true;
+            io.to(roomId).emit('game_start');
+            console.log(`Partie lancée dans ${roomId}.`);
         }
     });
 
-    // Tir d'un joueur sur une case (x, y)
-    socket.on('attack', ({ x, y }) => {
-        if (!gameActive) return;
-        const attacker = players.find(p => p.socket.id === socket.id);
-        if (!attacker || attacker.number !== currentTurn) {
-            return;  // Ce n'est pas le tour de ce joueur
-        }
-        const defender = players.find(p => p.number !== attacker.number);
+
+// Tir d'un joueur sur une case (x, y)
+    socket.on('attack', ({x, y, roomId}) => {
+        const room = rooms[roomId];
+        if (!room || !room.gameActive) return;
+
+        const attacker = room.players.find(p => p.socket.id === socket.id);
+        if (!attacker || attacker.number !== room.currentTurn) return;
+
+        const defender = room.players.find(p => p.number !== attacker.number);
         if (!defender) return;
 
         let result;
-        let shipName = '';         // Nom du bateau coulé (pour attaquant)
-        let defenderShipName = ''; // Nom du bateau touché (pour défenseur)
-        const cellValue = defender.board[y][x];  // Valeur de la case sur le plateau défenseur
+        let shipName = '';
+        let defenderShipName = '';
         let sunkCoords = [];
 
+        const cellValue = defender.board[y][x];
+
         if (cellValue === 0 || cellValue === 'miss' || cellValue === 'hit') {
-            // Tir à l'eau
             result = 'miss';
             defender.board[y][x] = 'miss';
         } else if (typeof cellValue === 'number') {
-            // Un navire est présent sur cette case
             const shipId = cellValue;
-            defender.board[y][x] = 'hit';  // Marquer la case comme touchée
+            defender.board[y][x] = 'hit';
             defender.ships[shipId].cellsLeft -= 1;
             defenderShipName = defender.ships[shipId].name;
+
             if (defender.ships[shipId].cellsLeft === 0) {
-                // Le navire est coulé
                 result = 'sunk';
                 shipName = defenderShipName;
-                // Trouver toutes les cases de ce navire
-                sunkCoords = [];
+                // Trouver les cases du navire coulé
                 for (let row = 0; row < 10; row++) {
                     for (let col = 0; col < 10; col++) {
                         if (defender.board[row][col] === 'hit') {
-                            // Check si ça correspond à ce navire
                             const originalValue = defender.originalBoard?.[row]?.[col];
                             if (originalValue === shipId || cellValue === shipId) {
-                                sunkCoords.push({ x: col, y: row });
+                                sunkCoords.push({x: col, y: row});
                             }
                         }
                     }
                 }
-                console.log(`Le navire ${shipName} du joueur ${defender.number} est coulé.`);
+                console.log(`${shipName} du joueur ${defender.number} coulé dans ${roomId}`);
             } else {
                 result = 'hit';
             }
         }
-        const payload = { x, y, result, shipName };
-        const opponentPayload = { x, y, result, shipName: defenderShipName };
-        // Si c’est un bateau coulé, ajouter les coordonnées du navire
+
+        const payload = {x, y, result, shipName};
+        const opponentPayload = {x, y, result, shipName: defenderShipName};
         if (result === 'sunk') {
             payload.sunkCoords = sunkCoords;
             opponentPayload.sunkCoords = sunkCoords;
         }
-        // Envoyer aux deux joueurs
+
+        // Réponse à l'attaquant et au défenseur
         attacker.socket.emit('attack_result', payload);
         defender.socket.emit('opponent_attack', opponentPayload);
 
-        // Vérifier la fin de partie (tous les bateaux du défenseur coulés)
+        // Vérification fin de partie
         if (result === 'sunk') {
             const shipsLeft = Object.values(defender.ships).some(ship => ship.cellsLeft > 0);
             if (!shipsLeft) {
-                gameActive = false;
-                io.emit('game_over', { winner: attacker.number });
-                console.log(`Partie terminée – Joueur ${attacker.number} a gagné.`);
+                room.gameActive = false;
+                io.to(roomId).emit('game_over', {winner: attacker.number});
+                console.log(`Partie terminée dans ${roomId} – Joueur ${attacker.number} a gagné`);
                 return;
             }
         }
 
-        // Si l'attaquant a manqué, passer le tour à l'autre joueur
+        // Si manqué, changer de joueur
         if (result === 'miss') {
-            currentTurn = defender.number;
+            room.currentTurn = defender.number;
         }
-        console.log(`Prochain tour : Joueur ${currentTurn}`);
+
+        console.log(`Prochain tour : Joueur ${room.currentTurn} dans ${roomId}`);
     });
 
-    // Redémarrage de la partie
-    socket.on('restart', () => {
-        // Réinitialiser l'état de chaque joueur pour la nouvelle partie
-        players.forEach(p => {
+
+// Redémarrage de la partie
+    socket.on('restart', ({roomId}) => {
+        const room = rooms[roomId];
+        if (!room) return;
+
+        // Réinitialiser l'état de chaque joueur dans la room
+        room.players.forEach(p => {
             p.ready = false;
-            p.board = Array.from({ length: 10 }, () => Array(10).fill(0));
+            p.board = Array.from({length: 10}, () => Array(10).fill(0));
             p.ships = {};
         });
-        gameActive = false;
-        currentTurn = null;
-        io.emit('restart_game');
-        console.log("Réinitialisation du jeu, en attente d'un nouveau placement.");
+
+        room.gameActive = false;
+        room.currentTurn = null;
+
+        io.to(roomId).emit('restart_game');
+        console.log(`Rejouer dans ${roomId}. En attente d’un nouveau placement.`);
     });
 
-    // Déconnexion d'un joueur
+
+// Déconnexion d'un joueur
     socket.on('disconnect', () => {
-        console.log(`Joueur ${playerNum} déconnecté.`);
-        players = players.filter(p => p.socket.id !== socket.id);
-        // Si un seul joueur reste, attente  d'un adversaire
-        if (players.length === 1) {
-            players[0].ready = false;
-            players[0].board = Array.from({ length: 10 }, () => Array(10).fill(0));
-            players[0].ships = {};
-            players[0].socket.emit('opponent_left');
-            console.log("L'autre joueur a quitté. En attente d'un nouvel adversaire...");
+        // Trouver la room du joueur
+        const roomId = Array.from(socket.rooms).find(r => r !== socket.id);
+        const room = rooms[roomId];
+        if (!room) return;
+
+        const player = room.players.find(p => p.socket.id === socket.id);
+        console.log(`Joueur ${player?.number ?? '?'} déconnecté de ${roomId}.`);
+
+        // Retirer le joueur de la room
+        room.players = room.players.filter(p => p.socket.id !== socket.id);
+
+        if (room.players.length === 0) {
+            // Supprimer la room si plus personne
+            delete rooms[roomId];
+            console.log(`Room ${roomId} supprimée (vide).`);
+        } else {
+            // Prévenir le joueur restant et réinitialiser son état
+            const remainingPlayer = room.players[0];
+            remainingPlayer.ready = false;
+            remainingPlayer.board = Array.from({length: 10}, () => Array(10).fill(0));
+            remainingPlayer.ships = {};
+            room.gameActive = false;
+            room.currentTurn = null;
+            remainingPlayer.socket.emit('opponent_left');
+            console.log(`Joueur ${remainingPlayer.number} attend un adversaire dans ${roomId}.`);
         }
-        gameActive = false;
-        currentTurn = null;
     });
 });
 

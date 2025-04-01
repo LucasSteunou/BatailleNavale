@@ -17,6 +17,11 @@ socket.on('player_number', (num) => {
     }
 });
 
+window.roomId = null;
+socket.on('room_assigned', (id) => {
+    window.roomId = id;
+});
+
 // Un deuxième joueur a rejoint la partie
 socket.on('opponent_connected', () => {
     if (playerNumber === 1) {
@@ -170,12 +175,16 @@ socket.on('chat_message', ({ player, message }) => {
 
 // Envoi d'un message de chat
 sendBtn.addEventListener('click', () => {
-    if (chatInput.value.trim() === "" || playerNumber === null) return;
-    socket.emit('chat_message', chatInput.value);
+    if (chatInput.value.trim() === "" || !roomId) return;
+    socket.emit('chat_message', {
+        message: chatInput.value,
+        roomId
+    });
     chatInput.value = "";
 });
 chatInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
         sendBtn.click();
+        roomId
     }
 });

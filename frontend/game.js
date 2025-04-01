@@ -30,6 +30,12 @@ hitSound.volume = 0.9;
 missSound.volume = 0.7;
 sunkSound.volume = 0.8;
 
+// Charge les animations de tir
+const explosionImg = new Image();
+const waterImg = new Image();
+explosionImg.src = 'images/explosion.png';
+waterImg.src = 'images/goutte.png';
+
 
 // Navires à placer (identifiant, nom, taille)
 const shipsToPlace = [
@@ -74,17 +80,10 @@ function drawGrid(ctx, board, hideShips = false, isPlayer = false) {
             } else if (cell === 'sunk') {
                 ctx.fillStyle = 'red';
                 ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-                const img = new Image();
-                img.src = 'images/explosion.png';
-                img.onload = () => {
-                    ctx.drawImage(img, x * cellSize, y * cellSize, cellSize, cellSize);
-                };
-                if (img.complete) {
-                    ctx.drawImage(img, x * cellSize, y * cellSize, cellSize, cellSize);
+                ctx.drawImage(explosionImg, x * cellSize, y * cellSize, cellSize, cellSize);
                 }
             }
         }
-    }
     // Indiquer le positionnement possible du navire sélectionné sous le curseur
     if (!gameStarted && isPlayer && selectedShip && hoverX >= 0 && hoverY >= 0) {
         const size = selectedShip.size;
@@ -316,7 +315,7 @@ readyBtn.addEventListener('click', () => {
     randomBtn.disabled = true;
     rotateBtn.disabled = true;
     // Envoyer au serveur que le joueur est prêt (avec son plateau)
-    socket.emit('ready', playerBoard);
+    socket.emit('ready', { board : playerBoard, roomId: window.roomId });
     updateInfoBox("En attente que l'adversaire soit prêt...");
 });
 
@@ -328,39 +327,31 @@ enemyCanvas.addEventListener('click', (e) => {
     const y = Math.floor((e.clientY - rect.top) / cellSize);
     // Ne tirer que si la case n'a pas déjà été visée
     if (enemyBoard[y][x] === 'hit' || enemyBoard[y][x] === 'miss') return;
-    socket.emit('attack', { x, y });
+    socket.emit('attack', { x, y, roomId: window.roomId });
     // Le résultat du tir est géré via socket.io
 });
 
 // Bouton "Rejouer" (nouvelle partie)
 restartBtn.addEventListener('click', () => {
-    socket.emit('restart');
+    socket.emit('restart', {roomId: window.roomId});
 });
 
 // Effet visuel d'explosion sur une case touchée
 function triggerExplosion(ctx, x, y) {
-    const explosionImg = new Image();
-    explosionImg.src = 'images/explosion.png';
-    explosionImg.onload = () => {
         ctx.drawImage(explosionImg, x * cellSize, y * cellSize, cellSize, cellSize);
         // Effacer l'explosion après 1 seconde en redessinant la grille concernée
         setTimeout(() => {
             drawGrid(ctx, ctx === playerCtx ? playerBoard : enemyBoard, ctx === enemyCtx);
         }, 1000);
-    };
 }
 
 // Goutte d'eau sur une case manquée
 function triggerWater(ctx, x, y) {
-    const waterImg = new Image();
-    waterImg.src = 'images/goutte.png';
-    waterImg.onload = () => {
         ctx.drawImage(waterImg, x * cellSize, y * cellSize, cellSize, cellSize);
         // Effacer la goutte après 1 seconde en redessinant la grille concernée
         setTimeout(() => {
             drawGrid(ctx, ctx === playerCtx ? playerBoard : enemyBoard, ctx === enemyCtx);
         }, 1000);
-    };
 }
 
 // Dessiner les grilles vides au chargement initial
