@@ -35,6 +35,11 @@ socket.on('opponent_ready', () => {
 // Début de la partie (les deux joueurs ont cliqué "Prêt")
 socket.on('game_start', () => {
     gameStarted = true;
+    // Change la musique
+    lobbyMusic.pause();
+    lobbyMusic.currentTime = 0;
+    battleMusic.play();
+
     if (playerNumber === 1) {
         isMyTurn = true;
         updateInfoBox("La partie commence ! C'est votre tour.");
@@ -60,9 +65,12 @@ socket.on('attack_result', ({ x, y, result, shipName }) => {
     // Effet d'explosion côté attaquant si touché
     if (result === 'hit' || result === 'sunk') {
         triggerExplosion(enemyCtx, x, y);
+        hitSound.play();
     }
     // Message de résultat pour le joueur
     if (result === 'miss') {
+        missSound.play();
+        triggerWater(enemyCtx, x, y);
         updateInfoBox("À l'eau ! Tour de l'adversaire...");
         isMyTurn = false;
     } else if (result === 'hit') {
@@ -84,9 +92,12 @@ socket.on('opponent_attack', ({ x, y, result, shipName }) => {
     // Effet d'explosion côté défenseur si touché
     if (result === 'hit' || result === 'sunk') {
         triggerExplosion(playerCtx, x, y);
+        hitSound.play();
     }
     // Message pour le joueur défenseur
     if (result === 'miss') {
+        triggerWater(enemyCtx, x, y);
+        missSound.play();
         updateInfoBox("L'adversaire a manqué. À vous de jouer !");
         isMyTurn = true;
     } else if (result === 'hit') {
@@ -102,6 +113,8 @@ socket.on('opponent_attack', ({ x, y, result, shipName }) => {
 
 // Fin de partie (tous les bateaux d'un joueur coulés)
 socket.on('game_over', ({ winner }) => {
+    battleMusic.pause();
+    battleMusic.currentTime = 0;
     let message;
     if (winner === playerNumber) {
         message = "Vous avez gagné !";

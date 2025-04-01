@@ -13,6 +13,23 @@ const gameOverOverlay = document.getElementById('game-over');
 const gameOverText = document.getElementById('game-over-text');
 const restartBtn = document.getElementById('restart-btn');
 
+// === Musiques et sons ===
+const lobbyMusic = new Audio('audio/lobby.mp3');
+const battleMusic = new Audio('audio/battle.mp3');
+const hitSound = new Audio('audio/hit.mp3');
+const missSound = new Audio('audio/miss.mp3');
+
+// Boucle les musiques d’ambiance
+lobbyMusic.loop = true;
+battleMusic.loop = true;
+
+// Volume ajustable
+lobbyMusic.volume = 0.4;
+battleMusic.volume = 0.4;
+hitSound.volume = 0.9;
+missSound.volume = 0.7;
+
+
 // Navires à placer (identifiant, nom, taille)
 const shipsToPlace = [
     { id: 1, name: "Porte-avions", size: 5 },
@@ -311,7 +328,7 @@ restartBtn.addEventListener('click', () => {
 // Effet visuel d'explosion sur une case touchée
 function triggerExplosion(ctx, x, y) {
     const explosionImg = new Image();
-    explosionImg.src = 'explosion.png';
+    explosionImg.src = 'images/explosion.png';
     explosionImg.onload = () => {
         ctx.drawImage(explosionImg, x * cellSize, y * cellSize, cellSize, cellSize);
         // Effacer l'explosion après 1 seconde en redessinant la grille concernée
@@ -321,6 +338,32 @@ function triggerExplosion(ctx, x, y) {
     };
 }
 
+// Goutte d'eau sur une case manquée
+function triggerWater(ctx, x, y) {
+    const waterImg = new Image();
+    waterImg.src = 'images/goutte.png';
+    waterImg.onload = () => {
+        ctx.drawImage(waterImg, x * cellSize, y * cellSize, cellSize, cellSize);
+        // Effacer la goutte après 1 seconde en redessinant la grille concernée
+        setTimeout(() => {
+            drawGrid(ctx, ctx === playerCtx ? playerBoard : enemyBoard, ctx === enemyCtx);
+        }, 1000);
+    };
+}
+
 // Dessiner les grilles vides au chargement initial
 drawGrid(playerCtx, playerBoard, false, true);
 drawGrid(enemyCtx, enemyBoard, true);
+
+window.addEventListener('load', () => {
+    lobbyMusic.play().catch(() => {
+        console.log("Lecture automatique bloquée. L’utilisateur doit interagir.");
+    });
+});
+
+window.addEventListener('click', () => {
+    if (lobbyMusic.paused && !gameStarted) {
+        lobbyMusic.play().catch((e) => console.log("Autoplay bloqué :", e));
+    }
+}, { once: true });  // ne s'exécute qu'une seule fois
+
