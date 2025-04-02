@@ -53,10 +53,12 @@ Pour installer et exécuter ce projet localement, suivez ces étapes :
 1. **Connexion au Jeu** :
    - Ouvrez deux fenêtres de navigateur ou utilisez deux appareils pour simuler deux joueurs.
    - Chaque joueur doit accéder à l'URL du serveur pour rejoindre une partie.
+   ![L'écran du jeu lors de la connexion](assets/Attente.png)
 
 2. **Placement des Navires** :
    - Placez vos navires sur la grille en utilisant l'interface de placement.
    - Vous pouvez utiliser le placement aléatoire ou placer manuellement vos navires.
+   ![L'écran lors du placement](assets/Placement.png)
 
 3. **Début de la Partie** :
    - Une fois les navires placés, cliquez sur "Prêt" pour indiquer que vous êtes prêt à commencer.
@@ -65,10 +67,12 @@ Pour installer et exécuter ce projet localement, suivez ces étapes :
 4. **Jouer au Jeu** :
    - Cliquez sur les cases de la grille adverse pour attaquer.
    - Les résultats des attaques (touché, manqué, coulé) sont affichés en temps réel.
+     ![L'écran lors du jeu](assets/Jeu.png)
+     ![Jeu en cours...](assets/Jeu2.png)
 
 5. **Fin de la Partie** :
    - Le jeu se termine lorsque tous les navires d'un joueur sont coulés.
-   - Vous pouvez redémarrer une nouvelle partie en cliquant sur "Rejouer".
+   - Vous pouvez redémarrer une nouvelle partie en cliquant sur "Rejouer", cela redémarre alors une partie pour les deux joueurs présents dans le salon.
 
 ## Contribution
 
@@ -85,5 +89,3 @@ Les contributions sont les bienvenues ! Pour contribuer :
 Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
 ---
-
-N'hésitez pas à personnaliser ce README en fonction des spécificités de votre projet ou des informations supplémentaires que vous souhaitez inclure.
