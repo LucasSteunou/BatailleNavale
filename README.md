@@ -46,7 +46,7 @@ Pour installer et exécuter ce projet localement, suivez ces étapes :
 4. **Accéder à l'Application** :
    Ouvrez votre navigateur et allez à `http://localhost:3000` pour jouer au jeu en local.
    
-   Pour jouer en ligne, vous pourrez à l'occasion (nous ne mettons pas le jeu en ligne à toute heure) ouvrir votre navigateur à l'adresse suivante : https://AdamLucasBatailleNavale.up.railway.app/
+   Pour jouer en ligne, vous pourrez à l'occasion (nous ne mettons pas le jeu en ligne à toute heure) ouvrir votre navigateur à l'adresse suivante : https://AdamLucas.up.railway.app/
 
 ## Utilisation
 
