@@ -370,3 +370,31 @@ window.addEventListener('click', () => {
     }
 }, { once: true });  // ne s'exécute qu'une seule fois
 
+let currentImage = null;
+
+document.querySelectorAll('.credit-name').forEach(el => {
+    el.addEventListener('click', () => {
+        const imgSrc = el.dataset.image;
+        const popup = document.getElementById('credit-popup');
+        const img = document.getElementById('credit-image');
+
+        if (popup.classList.contains('hidden')) {
+            img.src = imgSrc;
+            popup.classList.remove('hidden');
+            currentImage = imgSrc;
+        } else {
+            if (currentImage === imgSrc) {
+                popup.classList.add('hidden');
+                currentImage = null;
+            } else {
+                img.src = imgSrc;
+                currentImage = imgSrc;
+            }
+        }
+    });
+});
+
+document.getElementById('credit-popup').addEventListener('click', () => {
+    document.getElementById('credit-popup').classList.add('hidden');
+    currentImage = null;
+});
